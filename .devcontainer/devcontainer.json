@@ -1,0 +1,26 @@
+{
+  "name": "Python Tkinter GUI Environment",
+  "image": "://microsoft.com",
+  
+  // Automates installing the VNC server and light desktop interface
+  "features": {
+    "ghcr.io/devcontainers/features/desktop-lite:1": {
+      "password": "vscode",
+      "webPort": "6080",
+      "vncPort": "5901"
+    }
+  },
+
+  // Auto-installs Tkinter into the Linux container right after creation
+  "postCreateCommand": "sudo apt update && sudo apt install -y python3-tk",
+
+  // Explicitly forwards the web browser noVNC port to your machine
+  "forwardPorts": [6080],
+
+  "portsAttributes": {
+    "6080": {
+      "label": "noVNC Desktop",
+      "onAutoForward": "notify"
+    }
+  }
+}
