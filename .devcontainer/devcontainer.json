@@ -1,6 +1,6 @@
 {
   "name": "Python Tkinter GUI Environment",
-  "image": "://microsoft.com",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
   
   // Automates installing the VNC server and light desktop interface
   "features": {
@@ -12,7 +12,7 @@
   },
 
   // Auto-installs Tkinter into the Linux container right after creation
-  "postCreateCommand": "sudo apt update && sudo apt install -y python3-tk",
+  "postCreateCommand": "if command -v apt >/dev/null 2>&1; then sudo apt update && sudo apt install -y python3 python3-pip python3-tk; elif command -v apk >/dev/null 2>&1; then sudo apk add --no-cache python3 py3-pip python3-tkinter; fi",
 
   // Explicitly forwards the web browser noVNC port to your machine
   "forwardPorts": [6080],
