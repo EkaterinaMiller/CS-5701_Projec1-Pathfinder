@@ -79,8 +79,8 @@ def breadth_first_steps(grid: list[list[str]]) -> list[tuple[list[Node], list[No
             steps.append((open_list.copy(), close_list.copy(), True))
             return steps
 
-        # Explore neighbors (up, down, left, right).
-        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        # Explore neighbors (up, right, down, left).
+        for dr, dc in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
             nr, nc = r + dr, c + dc
             if 0 <= nr < rows and 0 <= nc < cols:
                 symbol = grid[nr][nc]

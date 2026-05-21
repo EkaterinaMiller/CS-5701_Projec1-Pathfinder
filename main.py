@@ -6,7 +6,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
-from breathfirst import breadth_first_steps, reconstruct_path
+from breathfirst import WAIT, breadth_first_steps, reconstruct_path
 
 
 GRID_SIZE = 40
@@ -151,6 +151,53 @@ def draw_map(
 				)
 
 
+def add_legend_panel(parent: tk.Widget) -> None:
+	"""Add a visual legend panel showing map and animation markers."""
+	legend_frame = tk.LabelFrame(parent, text="Legend", padx=8, pady=8)
+	legend_frame.pack(side="left", fill="y", padx=(8, 0), pady=(0, 8))
+
+	def label_with_cost(symbol: str, name: str) -> str:
+		if symbol in WAIT:
+			return f"{name} (cost {WAIT[symbol]})"
+		if symbol == "W":
+			return f"{name} (blocked)"
+		return name
+
+	legend_items = [
+		("R", label_with_cost("R", "Road"), "#9f7a52", "tile"),
+		("F", label_with_cost("F", "Field"), "#7ecb6f", "tile"),
+		("O", label_with_cost("O", "Forest"), "#2f7d32", "tile"),
+		("H", label_with_cost("H", "Hills"), "#bda97a", "tile"),
+		("M", label_with_cost("M", "Mountains"), "#8f8f8f", "tile"),
+		("W", label_with_cost("W", "Water"), "#4d8ed6", "tile"),
+		("S", label_with_cost("S", "Start"), "#f7ed7d", "start"),
+		("E", label_with_cost("E", "End"), "#f2f2f2", "end"),
+		("", "Open list", "#ffd400", "overlay"),
+		("", "Closed list", "#ff8c00", "overlay"),
+		("", "Path", "red", "path"),
+	]
+
+	for row_index, (symbol, label, color, marker_type) in enumerate(legend_items):
+		item = tk.Frame(legend_frame)
+		item.grid(row=row_index, column=0, sticky="w", pady=2)
+
+		swatch = tk.Canvas(item, width=20, height=20, highlightthickness=1, highlightbackground="#999")
+		swatch.pack(side="left")
+		swatch.create_rectangle(0, 0, 20, 20, fill=color, outline="")
+
+		if marker_type == "start":
+			swatch.create_text(10, 10, text="S", fill="black", font=("Arial", 9, "bold"))
+		elif marker_type == "end":
+			swatch.create_polygon(star_points(2, 2, 18, 18), fill="red", outline="#8b0000", width=1)
+		elif marker_type == "overlay":
+			swatch.create_rectangle(0, 0, 20, 20, fill=color, stipple="gray50", outline="")
+		elif marker_type == "path":
+			swatch.create_oval(6, 6, 14, 14, fill="red", outline="")
+
+		title = f"{symbol} - {label}" if symbol else label
+		tk.Label(item, text=title).pack(side="left", padx=6)
+
+
 def create_app(initial_map: Path) -> tk.Tk:
 	"""Create the GUI window and load the initial map."""
 	root = tk.Tk()
@@ -168,14 +215,18 @@ def create_app(initial_map: Path) -> tk.Tk:
 	toolbar = tk.Frame(root, padx=8, pady=6)
 	toolbar.pack(fill="x")
 
+	content = tk.Frame(root)
+	content.pack(padx=8, pady=(0, 8))
+
 	canvas = tk.Canvas(
-		root,
+		content,
 		width=GRID_SIZE * CELL_SIZE,
 		height=GRID_SIZE * CELL_SIZE,
 		bg="white",
 		highlightthickness=0,
 	)
-	canvas.pack(padx=8, pady=(0, 8))
+	canvas.pack(side="left")
+	add_legend_panel(content)
 	status_var = tk.StringVar(value="Load a map and press Start BFS.")
 
 	def cancel_animation() -> None:
@@ -265,11 +316,6 @@ def create_app(initial_map: Path) -> tk.Tk:
 	start_button = tk.Button(toolbar, text="Start BFS", command=start_bfs_animation)
 	start_button.pack(side="left", padx=(8, 0))
 
-	legend = (
-		"Legend: R=Road, F=Field, O=Forest, H=Hills, M=Mountains, "
-		"W=Water, S=Start, E=End, Open=Yellow, Closed=Orange, Path=Red Dots"
-	)
-	tk.Label(toolbar, text=legend).pack(side="left", padx=10)
 	tk.Label(root, textvariable=status_var, anchor="w").pack(fill="x", padx=8, pady=(0, 8))
 
 	load_map(initial_map)
