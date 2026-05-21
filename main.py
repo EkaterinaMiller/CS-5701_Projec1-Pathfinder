@@ -202,6 +202,11 @@ def create_app(initial_map: Path) -> tk.Tk:
 	"""Create the GUI window and load the initial map."""
 	root = tk.Tk()
 	root.title("40x40 Terrain Map Viewer")
+	# Set window size to fit inside a typical VNC desktop (e.g., 1024x768)
+	# Allow for toolbar, legend, and some padding
+	window_width = min(900, GRID_SIZE * CELL_SIZE + 120)
+	window_height = min(900, GRID_SIZE * CELL_SIZE + 120)
+	root.geometry(f"{window_width}x{window_height}+0+0")
 	root.resizable(False, False)
 	animation_delay_ms = 40
 
