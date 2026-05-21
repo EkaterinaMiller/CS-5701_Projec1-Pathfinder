@@ -50,6 +50,7 @@ def reconstruct_path(close_list: list[Node], grid: list[list[str]]) -> list[Node
 
 def breadth_first_steps(grid: list[list[str]]) -> list[tuple[list[Node], list[Node], bool]]:
     """Return BFS snapshots as (open_list, close_list, found_goal) for animation."""
+    """Small extra note: this function is actually doing cost-ordered expansion (because of wait sorting), so it behaves more like uniform-cost search than plain BFS."""
     rows = len(grid)
     cols = len(grid[0]) if rows > 0 else 0
 
@@ -84,7 +85,7 @@ def breadth_first_steps(grid: list[list[str]]) -> list[tuple[list[Node], list[No
             nr, nc = r + dr, c + dc
             if 0 <= nr < rows and 0 <= nc < cols:
                 symbol = grid[nr][nc]
-                if symbol == "W":
+                if symbol == "W":# Water is impassable.
                     continue
                 if (nr, nc) in closed_positions or (nr, nc) in open_positions:
                     continue
