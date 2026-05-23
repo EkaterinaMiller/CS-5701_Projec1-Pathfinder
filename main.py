@@ -9,7 +9,7 @@ from typing import Callable
 
 from search_algorithms import (
 	Node,
-	WAIT,
+	WEIGHTS,
 	a_star_euclidean_steps,
 	a_star_manhattan_steps,
 	breadth_first_steps,
@@ -25,14 +25,16 @@ GRID_SIZE = 40
 CELL_SIZE = 18
 
 TERRAIN_COLORS = {
-	"R": "#9f7a52",  # Road
-	"F": "#7ecb6f",  # Field
-	"O": "#2f7d32",  # Forest
-	"H": "#bda97a",  # Hills
-	"M": "#8f8f8f",  # Mountains
-	"W": "#4d8ed6",  # Water
+	"R": "#f9f102",  # Road
+	"F": "#6bfc2d",  # Field
+	"O": "#0fcb51",  # Forest
+	"H": "#7a9179",  # Hills
+	"M": "#636262",  # Mountains
+	"W": "#030bfa",  # Water
 	"S": "#f7ed7d",  # Start (also shows letter S)
 	"E": "#f2f2f2",  # End (shows red star)
+	"open": "#dd00ff",  # Open list overlay
+	"closed": "#fb545c",  # Closed list overlay
 }
 
 
@@ -119,7 +121,7 @@ def draw_map(
 					y0,
 					x1,
 					y1,
-					fill="#ff8c00",
+					fill=TERRAIN_COLORS["closed"],
 					stipple="gray50",
 					outline="",
 				)
@@ -130,7 +132,7 @@ def draw_map(
 					y0,
 					x1,
 					y1,
-					fill="#ffd400",
+					fill=TERRAIN_COLORS["open"],
 					stipple="gray50",
 					outline="",
 				)
@@ -172,7 +174,7 @@ def path_total_cost(path: list[Node], grid: list[list[str]]) -> int:
 	# Skip the start node itself; each move pays the destination cell cost.
 	for node in path[1:]:
 		r, c = node.position
-		total += WAIT[grid[r][c]]
+		total += WEIGHTS[grid[r][c]]
 	return total
 
 
@@ -182,23 +184,23 @@ def add_legend_panel(parent: tk.Widget) -> None:
 	legend_frame.pack(side="left", fill="y", padx=(8, 0), pady=(0, 8))
 
 	def label_with_cost(symbol: str, name: str) -> str:
-		if symbol in WAIT:
-			return f"{name} (cost {WAIT[symbol]})"
+		if symbol in WEIGHTS:
+			return f"{name} (cost {WEIGHTS[symbol]})"
 		if symbol == "W":
 			return f"{name} (blocked)"
 		return name
 
 	legend_items = [
-		("R", label_with_cost("R", "Road"), "#9f7a52", "tile"),
-		("F", label_with_cost("F", "Field"), "#7ecb6f", "tile"),
-		("O", label_with_cost("O", "Forest"), "#2f7d32", "tile"),
-		("H", label_with_cost("H", "Hills"), "#bda97a", "tile"),
-		("M", label_with_cost("M", "Mountains"), "#8f8f8f", "tile"),
-		("W", label_with_cost("W", "Water"), "#4d8ed6", "tile"),
-		("S", label_with_cost("S", "Start"), "#f7ed7d", "start"),
-		("E", label_with_cost("E", "End"), "#f2f2f2", "end"),
-		("", "Open list", "#ffd400", "overlay"),
-		("", "Closed list", "#ff8c00", "overlay"),
+		("R", label_with_cost("R", "Road"), TERRAIN_COLORS["R"], "tile"),
+		("F", label_with_cost("F", "Field"), TERRAIN_COLORS["F"], "tile"),
+		("O", label_with_cost("O", "Forest"), TERRAIN_COLORS["O"], "tile"),
+		("H", label_with_cost("H", "Hills"), TERRAIN_COLORS["H"], "tile"),
+		("M", label_with_cost("M", "Mountains"), TERRAIN_COLORS["M"], "tile"),
+		("W", label_with_cost("W", "Water"), TERRAIN_COLORS["W"], "tile"),
+		("S", label_with_cost("S", "Start"), TERRAIN_COLORS["S"], "start"),
+		("E", label_with_cost("E", "End"), TERRAIN_COLORS["E"], "end"),
+		("", "Open list", TERRAIN_COLORS["open"], "overlay"),
+		("", "Closed list", TERRAIN_COLORS["closed"], "overlay"),
 		("", "Path", "red", "path"),
 	]
 
