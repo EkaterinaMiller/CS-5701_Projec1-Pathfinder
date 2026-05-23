@@ -54,10 +54,6 @@ def manhattan_distance(pos1: tuple[int, int], pos2: tuple[int, int]) -> int:
     """Calculate the Manhattan distance between two positions."""
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
-# def initialize_uninform_cost(grid: list[list[str]]) -> tuple[list[Node], list[Node]]:
-#     """Create initial open/close lists for step-by-step uniform-cost search visualization."""
-#     return initialize_breadth_first(grid)
-
 
 def reconstruct_path(close_list: list[Node], grid: list[list[str]]) -> list[Node]:
     """Rebuild a path from the goal node back to start using parent pointers."""
@@ -116,6 +112,7 @@ def _search_step(
     if grid[r][c] == "E":
         return open_list, close_list
 
+    # Neighbor order is Up, Right, Down, Left 
     for dr, dc in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
         nr, nc = r + dr, c + dc
         if 0 <= nr < rows and 0 <= nc < cols:
@@ -142,6 +139,7 @@ def breadth_first_steps(
     close_list: list[Node],
 ) -> tuple[list[Node], list[Node]]:
     """Perform one true BFS step in place: FIFO expansion (ignores weights for ordering)."""
+    # FIFO queue behavior: append neighbors to tail without sorting.
     return _search_step(
         grid,
         open_list,
@@ -157,6 +155,7 @@ def uninform_cost_steps(
     close_list: list[Node],
 ) -> tuple[list[Node], list[Node]]:
     """Perform one uniform-cost step in place: expand by lowest accumulated cost."""
+    # Uniform-cost behavior: order frontier by path cost g(n).
     return _search_step(
         grid,
         open_list,
@@ -172,6 +171,7 @@ def greedy_best_first_steps(
     end_pos: tuple[int, int],
 ) -> tuple[list[Node], list[Node]]:
     """Perform one greedy best-first step in place: expand by lowest heuristic cost."""
+    # Greedy behavior: order by h(n) only (ignores travelled path cost).
     return _search_step(
         grid,
         open_list,
@@ -208,6 +208,7 @@ def a_star_manhattan_steps(
     """Perform one A* Manhattan step in place using f(n) = g(n) + h(n)."""
     def weight_fn(current: Node, npos: tuple[int, int], symbol: str) -> float:
         # Keep backward-compatible behavior: current.weight stores f(n).
+        # The factor scales heuristic influence: 0 => UCS-like, larger => greedier.
         h_current = 0.0 if current.parent is None else factor * manhattan_distance(current.position, end_pos)
         g_current = current.weight - h_current
         g_next = g_current + WEIGHTS[symbol]

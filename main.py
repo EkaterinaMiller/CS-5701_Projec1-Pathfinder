@@ -238,6 +238,7 @@ def create_app(initial_map: Path) -> tk.Tk:
 	animation_delay_ms = 40
 
 	state: dict[str, object] = {
+		# Runtime state for the currently loaded map and active animation.
 		"grid": None,
 		"map_path": initial_map,
 		"open_list": [],
@@ -279,6 +280,7 @@ def create_app(initial_map: Path) -> tk.Tk:
 			messagebox.showerror("Map Load Error", str(exc))
 			return
 
+		# Reset both visual and algorithm state when a new map is loaded.
 		cancel_animation()
 		state["grid"] = grid
 		state["map_path"] = map_path
@@ -322,6 +324,7 @@ def create_app(initial_map: Path) -> tk.Tk:
 			status_var.set("Select an algorithm to start.")
 			return
 
+		# Stop condition: reached goal earlier or frontier exhausted.
 		goal_found = bool(state.get("goal_found"))
 		if goal_found or not open_list:
 			path_positions: set[tuple[int, int]] = set()
@@ -354,6 +357,7 @@ def create_app(initial_map: Path) -> tk.Tk:
 			state["after_id"] = None
 			return
 
+		# Execute exactly one algorithm step per frame.
 		open_list, close_list = step_func(grid, open_list, close_list)
 		state["open_list"] = open_list
 		state["close_list"] = close_list
@@ -396,6 +400,7 @@ def create_app(initial_map: Path) -> tk.Tk:
 			messagebox.showerror(f"{algorithm_name} Error", str(exc))
 			return
 
+		# Shared launcher for all algorithms: initialize, disable buttons, then animate.
 		cancel_animation()
 		state["open_list"] = open_list
 		state["close_list"] = close_list
