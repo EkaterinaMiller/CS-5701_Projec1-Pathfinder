@@ -41,13 +41,20 @@ def find_end(grid: list[list[str]]) -> tuple[int, int] | None:
                 return (r, c)
     return None
 
-def initialize_search(grid: list[list[str]]) -> tuple[list[Node], list[Node]]:
+def initialize_search(grid: list[list[str]], start_weight = 0) -> tuple[list[Node], list[Node]]:
     """Create initial open/close lists for step-by-step search visualization."""
     start = find_start(grid)
     if start is None:
         raise ValueError("Start position 'S' not found in the grid.")
-    return [Node(position=start, weight=0)], []
+    return [Node(position=start, weight=start_weight)], []
 
+def euclidean_distance(pos1: tuple[int, int], pos2: tuple[int, int]) -> float:
+    """Calculate the Euclidean distance between two positions."""
+    return sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2)
+
+def manhattan_distance(pos1: tuple[int, int], pos2: tuple[int, int]) -> int:
+    """Calculate the Manhattan distance between two positions."""
+    return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
 # def initialize_uninform_cost(grid: list[list[str]]) -> tuple[list[Node], list[Node]]:
 #     """Create initial open/close lists for step-by-step uniform-cost search visualization."""
@@ -210,7 +217,7 @@ def greedy_best_first_steps(
                 continue
             
             # cost_to_goal = sqrt((nr - end_pos[0])**2 + (nc - end_pos[1])**2)  # Euclidean distance
-            cost_to_goal = abs(nr - end_pos[0]) + abs(nc - end_pos[1])  # Manhattan distance
+            cost_to_goal = manhattan_distance((nr, nc), end_pos)  # Manhattan distance
             weight =  cost_to_goal
             inserted = False
             new_node = Node(position=(nr, nc), weight=weight, parent=current)
@@ -264,16 +271,14 @@ def a_star_euclidean_steps(
                 continue
 
             # Store g(n) in Node.weight and sort frontier by f(n)=g(n)+h(n).
-            g_cost = current.weight + WEIGHTS[symbol]
-            h_cost = sqrt((nr - end_pos[0]) ** 2 + (nc - end_pos[1]) ** 2)
-            new_priority = g_cost + h_cost
+            curent_cost = current.weight - euclidean_distance(current.position, end_pos) + WEIGHTS[symbol]
+            estimate_to_goal = euclidean_distance((nr, nc), end_pos)
+            new_cost = curent_cost + estimate_to_goal
             inserted = False
-            new_node = Node(position=(nr, nc), weight=g_cost, parent=current)
+            new_node = Node(position=(nr, nc), weight=new_cost, parent=current)
             for i in range(len(open_list)):
-                existing = open_list[i]
-                existing_h = sqrt((existing.position[0] - end_pos[0]) ** 2 + (existing.position[1] - end_pos[1]) ** 2)
-                existing_priority = existing.weight + existing_h
-                if existing_priority > new_priority:
+                existing = open_list[i] 
+                if existing.weight > new_cost:
                     open_list.insert(i, new_node)
                     inserted = True
                     break
@@ -289,6 +294,7 @@ def a_star_manhattan_steps(
     open_list: list[Node],
     close_list: list[Node],
     end_pos: tuple[int, int],
+    factor: float = 1.0,
 ) -> tuple[list[Node], list[Node]]:
     """Perform one A* Manhattan step in place using f(n) = g(n) + h(n)."""
     rows = len(grid)
@@ -323,16 +329,14 @@ def a_star_manhattan_steps(
                 continue
 
             # Store g(n) in Node.weight and sort frontier by f(n)=g(n)+h(n).
-            g_cost = current.weight + WEIGHTS[symbol]
-            h_cost = abs(nr - end_pos[0]) + abs(nc - end_pos[1])
-            new_priority = g_cost + h_cost
+            curent_cost = current.weight - (factor * manhattan_distance(current.position, end_pos)) + WEIGHTS[symbol]
+            estimate_to_goal = factor * manhattan_distance((nr, nc), end_pos)
+            new_cost = curent_cost + estimate_to_goal
             inserted = False
-            new_node = Node(position=(nr, nc), weight=g_cost, parent=current)
+            new_node = Node(position=(nr, nc), weight=new_cost, parent=current)
             for i in range(len(open_list)):
-                existing = open_list[i]
-                existing_h = abs(existing.position[0] - end_pos[0]) + abs(existing.position[1] - end_pos[1])
-                existing_priority = existing.weight + existing_h
-                if existing_priority > new_priority:
+                existing = open_list[i] 
+                if existing.weight > new_cost:
                     open_list.insert(i, new_node)
                     inserted = True
                     break
@@ -363,8 +367,9 @@ def uninform_cost(grid: list[list[str]]) -> tuple[list[Node], list[Node]]:
 
 def greedy_best_first(grid: list[list[str]]) -> tuple[list[Node], list[Node]]:
     """Run greedy best-first search from S to E."""
-    open_list, close_list = initialize_search(grid)
     end_pos = find_end(grid)
+    start_pos = find_start(grid)
+    open_list, close_list = initialize_search(grid, manhattan_distance(start_pos, end_pos))
     while open_list:
         open_list, close_list = greedy_best_first_steps(grid, open_list, close_list, end_pos)
         if close_list and grid[close_list[-1].position[0]][close_list[-1].position[1]] == "E":
@@ -373,8 +378,9 @@ def greedy_best_first(grid: list[list[str]]) -> tuple[list[Node], list[Node]]:
 
 def a_star_euclidean(grid: list[list[str]]) -> tuple[list[Node], list[Node]]:
     """Run A* search with Euclidean heuristic from S to E."""
-    open_list, close_list = initialize_search(grid)
     end_pos = find_end(grid)
+    start_pos = find_start(grid)
+    open_list, close_list = initialize_search(grid, euclidean_distance(start_pos, end_pos))
     while open_list:
         open_list, close_list = a_star_euclidean_steps(grid, open_list, close_list, end_pos)
         if close_list and grid[close_list[-1].position[0]][close_list[-1].position[1]] == "E":
@@ -384,10 +390,11 @@ def a_star_euclidean(grid: list[list[str]]) -> tuple[list[Node], list[Node]]:
 
 def a_star_manhattan(grid: list[list[str]]) -> tuple[list[Node], list[Node]]:
     """Run A* search with Manhattan heuristic from S to E."""
-    open_list, close_list = initialize_search(grid)
     end_pos = find_end(grid)
+    start_pos = find_start(grid)
+    open_list, close_list = initialize_search(grid, manhattan_distance(start_pos, end_pos))
     while open_list:
-        open_list, close_list = a_star_manhattan_steps(grid, open_list, close_list, end_pos)
+        open_list, close_list = a_star_manhattan_steps(grid, open_list, close_list, end_pos, factor=1.0)
         if close_list and grid[close_list[-1].position[0]][close_list[-1].position[1]] == "E":
             break
     return open_list, close_list

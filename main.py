@@ -4,7 +4,7 @@ import argparse
 import math
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 from typing import Callable
 
 from search_algorithms import (
@@ -163,6 +163,19 @@ def draw_map(
 				)
 
 
+def path_total_cost(path: list[Node], grid: list[list[str]]) -> int:
+	"""Compute total terrain cost for a reconstructed path from S to E."""
+	if not path:
+		return 0
+
+	total = 0
+	# Skip the start node itself; each move pays the destination cell cost.
+	for node in path[1:]:
+		r, c = node.position
+		total += WAIT[grid[r][c]]
+	return total
+
+
 def add_legend_panel(parent: tk.Widget) -> None:
 	"""Add a visual legend panel showing map and animation markers."""
 	legend_frame = tk.LabelFrame(parent, text="Legend", padx=8, pady=8)
@@ -279,6 +292,7 @@ def create_app(initial_map: Path) -> tk.Tk:
 		start_gbf_button.config(state="normal")
 		start_astar_euclidean_button.config(state="normal")
 		start_astar_manhattan_button.config(state="normal")
+		start_astar_manhattan_weight_button.config(state="normal")
 		status_var.set(f"Loaded map: {map_path.name}")
 
 	def animate_step() -> None:
@@ -293,6 +307,7 @@ def create_app(initial_map: Path) -> tk.Tk:
 			start_gbf_button.config(state="normal")
 			start_astar_euclidean_button.config(state="normal")
 			start_astar_manhattan_button.config(state="normal")
+			start_astar_manhattan_weight_button.config(state="normal")
 			status_var.set("No map loaded.")
 			return
 		if not callable(step_func):
@@ -301,15 +316,18 @@ def create_app(initial_map: Path) -> tk.Tk:
 			start_gbf_button.config(state="normal")
 			start_astar_euclidean_button.config(state="normal")
 			start_astar_manhattan_button.config(state="normal")
+			start_astar_manhattan_weight_button.config(state="normal")
 			status_var.set("Select an algorithm to start.")
 			return
 
 		goal_found = bool(state.get("goal_found"))
 		if goal_found or not open_list:
 			path_positions: set[tuple[int, int]] = set()
+			path_cost_text = "N/A"
 			if goal_found:
 				path = reconstruct_path(close_list, grid)
 				path_positions = {node.position for node in path}
+				path_cost_text = str(path_total_cost(path, grid))
 			draw_map(
 				canvas,
 				grid,
@@ -322,9 +340,15 @@ def create_app(initial_map: Path) -> tk.Tk:
 			start_gbf_button.config(state="normal")
 			start_astar_euclidean_button.config(state="normal")
 			start_astar_manhattan_button.config(state="normal")
-			status_var.set(
-				f"{algorithm_name} complete." if goal_found else f"{algorithm_name} stopped: no path found."
-			)
+			start_astar_manhattan_weight_button.config(state="normal")
+			if goal_found:
+				status_var.set(
+					f"{algorithm_name} complete | Closed: {len(close_list)} | Open: {len(open_list)} | Cost: {path_cost_text}"
+				)
+			else:
+				status_var.set(
+					f"{algorithm_name} stopped: no path found | Closed: {len(close_list)} | Open: {len(open_list)} | Cost: {path_cost_text}"
+				)
 			state["after_id"] = None
 			return
 
@@ -382,6 +406,7 @@ def create_app(initial_map: Path) -> tk.Tk:
 		start_gbf_button.config(state="disabled")
 		start_astar_euclidean_button.config(state="disabled")
 		start_astar_manhattan_button.config(state="disabled")
+		start_astar_manhattan_weight_button.config(state="disabled")
 		animate_step()
 
 	def start_bfs_animation() -> None:
@@ -446,9 +471,39 @@ def create_app(initial_map: Path) -> tk.Tk:
 			open_list: list[Node],
 			close_list: list[Node],
 		) -> tuple[list[Node], list[Node]]:
-			return a_star_manhattan_steps(current_grid, open_list, close_list, end_pos)
+			return a_star_manhattan_steps(current_grid, open_list, close_list, end_pos, factor=1.0)
 
 		start_search("A* Manhattan", initialize_search, a_star_step)
+
+	def start_a_star_manhattan_weight_animation() -> None:
+		grid = state.get("grid")
+		if not isinstance(grid, list):
+			status_var.set("Load a map first.")
+			return
+
+		factor = simpledialog.askfloat(
+			title="A* Manhattan Factor",
+			prompt="Enter Manhattan heuristic factor (>= 0):",
+			initialvalue=1.0,
+			minvalue=0.0,
+		)
+		if factor is None:
+			status_var.set("A* Manhattan weighted start cancelled.")
+			return
+
+		end_pos = find_end(grid)
+		if end_pos is None:
+			messagebox.showerror("A* Manhattan Error", "End position 'E' not found in the grid.")
+			return
+
+		def a_star_step(
+			current_grid: list[list[str]],
+			open_list: list[Node],
+			close_list: list[Node],
+		) -> tuple[list[Node], list[Node]]:
+			return a_star_manhattan_steps(current_grid, open_list, close_list, end_pos, factor=factor)
+
+		start_search(f"A* Manhattan x{factor:g}", initialize_search, a_star_step)
 
 	def choose_file_and_render() -> None:
 		selected = filedialog.askopenfilename(
@@ -483,6 +538,12 @@ def create_app(initial_map: Path) -> tk.Tk:
 		command=start_a_star_manhattan_animation,
 	)
 	start_astar_manhattan_button.pack(side="left", padx=(8, 0))
+	start_astar_manhattan_weight_button = tk.Button(
+		toolbar,
+		text="Start A* Manhattan w factor",
+		command=start_a_star_manhattan_weight_animation,
+	)
+	start_astar_manhattan_weight_button.pack(side="left", padx=(8, 0))
 
 	tk.Label(root, textvariable=status_var, anchor="w").pack(fill="x", padx=8, pady=(0, 8))
 
