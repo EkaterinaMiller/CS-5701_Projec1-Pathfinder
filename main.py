@@ -10,6 +10,8 @@ from typing import Callable
 from search_algorithms import (
 	Node,
 	WAIT,
+	a_star_euclidean_steps,
+	a_star_manhattan_steps,
 	breadth_first_steps,
 	find_end,
 	initialize_search,
@@ -275,6 +277,8 @@ def create_app(initial_map: Path) -> tk.Tk:
 		start_bfs_button.config(state="normal")
 		start_ucs_button.config(state="normal")
 		start_gbf_button.config(state="normal")
+		start_astar_euclidean_button.config(state="normal")
+		start_astar_manhattan_button.config(state="normal")
 		status_var.set(f"Loaded map: {map_path.name}")
 
 	def animate_step() -> None:
@@ -287,12 +291,16 @@ def create_app(initial_map: Path) -> tk.Tk:
 			start_bfs_button.config(state="normal")
 			start_ucs_button.config(state="normal")
 			start_gbf_button.config(state="normal")
+			start_astar_euclidean_button.config(state="normal")
+			start_astar_manhattan_button.config(state="normal")
 			status_var.set("No map loaded.")
 			return
 		if not callable(step_func):
 			start_bfs_button.config(state="normal")
 			start_ucs_button.config(state="normal")
 			start_gbf_button.config(state="normal")
+			start_astar_euclidean_button.config(state="normal")
+			start_astar_manhattan_button.config(state="normal")
 			status_var.set("Select an algorithm to start.")
 			return
 
@@ -312,6 +320,8 @@ def create_app(initial_map: Path) -> tk.Tk:
 			start_bfs_button.config(state="normal")
 			start_ucs_button.config(state="normal")
 			start_gbf_button.config(state="normal")
+			start_astar_euclidean_button.config(state="normal")
+			start_astar_manhattan_button.config(state="normal")
 			status_var.set(
 				f"{algorithm_name} complete." if goal_found else f"{algorithm_name} stopped: no path found."
 			)
@@ -370,6 +380,8 @@ def create_app(initial_map: Path) -> tk.Tk:
 		start_bfs_button.config(state="disabled")
 		start_ucs_button.config(state="disabled")
 		start_gbf_button.config(state="disabled")
+		start_astar_euclidean_button.config(state="disabled")
+		start_astar_manhattan_button.config(state="disabled")
 		animate_step()
 
 	def start_bfs_animation() -> None:
@@ -398,6 +410,46 @@ def create_app(initial_map: Path) -> tk.Tk:
 
 		start_search("GBF", initialize_search, gbf_step)
 
+	def start_a_star_euclidean_animation() -> None:
+		grid = state.get("grid")
+		if not isinstance(grid, list):
+			status_var.set("Load a map first.")
+			return
+
+		end_pos = find_end(grid)
+		if end_pos is None:
+			messagebox.showerror("A* Euclidean Error", "End position 'E' not found in the grid.")
+			return
+
+		def a_star_step(
+			current_grid: list[list[str]],
+			open_list: list[Node],
+			close_list: list[Node],
+		) -> tuple[list[Node], list[Node]]:
+			return a_star_euclidean_steps(current_grid, open_list, close_list, end_pos)
+
+		start_search("A* Euclidean", initialize_search, a_star_step)
+
+	def start_a_star_manhattan_animation() -> None:
+		grid = state.get("grid")
+		if not isinstance(grid, list):
+			status_var.set("Load a map first.")
+			return
+
+		end_pos = find_end(grid)
+		if end_pos is None:
+			messagebox.showerror("A* Manhattan Error", "End position 'E' not found in the grid.")
+			return
+
+		def a_star_step(
+			current_grid: list[list[str]],
+			open_list: list[Node],
+			close_list: list[Node],
+		) -> tuple[list[Node], list[Node]]:
+			return a_star_manhattan_steps(current_grid, open_list, close_list, end_pos)
+
+		start_search("A* Manhattan", initialize_search, a_star_step)
+
 	def choose_file_and_render() -> None:
 		selected = filedialog.askopenfilename(
 			title="Select Map File",
@@ -419,10 +471,18 @@ def create_app(initial_map: Path) -> tk.Tk:
 	#Greedy Best-First Search
 	start_gbf_button = tk.Button(toolbar, text="Start GBF", command=start_gbf_animation)
 	start_gbf_button.pack(side="left", padx=(8, 0))
-	start_button = tk.Button(toolbar, text="Start A* Euclidean", command=start_bfs_animation)
-	start_button.pack(side="left", padx=(8, 0))
-	start_button = tk.Button(toolbar, text="Start A* Manhattan", command=start_bfs_animation)
-	start_button.pack(side="left", padx=(8, 0))
+	start_astar_euclidean_button = tk.Button(
+		toolbar,
+		text="Start A* Euclidean",
+		command=start_a_star_euclidean_animation,
+	)
+	start_astar_euclidean_button.pack(side="left", padx=(8, 0))
+	start_astar_manhattan_button = tk.Button(
+		toolbar,
+		text="Start A* Manhattan",
+		command=start_a_star_manhattan_animation,
+	)
+	start_astar_manhattan_button.pack(side="left", padx=(8, 0))
 
 	tk.Label(root, textvariable=status_var, anchor="w").pack(fill="x", padx=8, pady=(0, 8))
 

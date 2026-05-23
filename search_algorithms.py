@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional
+from math import sqrt
 
 
 @dataclass
@@ -208,12 +209,130 @@ def greedy_best_first_steps(
             if (nr, nc) in closed_positions or (nr, nc) in open_positions:
                 continue
             
+            # cost_to_goal = sqrt((nr - end_pos[0])**2 + (nc - end_pos[1])**2)  # Euclidean distance
             cost_to_goal = abs(nr - end_pos[0]) + abs(nc - end_pos[1])  # Manhattan distance
-            weight = cost_to_goal
+            weight =  cost_to_goal
             inserted = False
             new_node = Node(position=(nr, nc), weight=weight, parent=current)
             for i in range(len(open_list)):
                 if open_list[i].weight > weight:
+                    open_list.insert(i, new_node)
+                    inserted = True
+                    break
+            if not inserted:
+                open_list.append(new_node)
+            open_positions.add((nr, nc))
+
+    return open_list, close_list
+
+def a_star_euclidean_steps(
+    grid: list[list[str]],
+    open_list: list[Node],
+    close_list: list[Node],
+    end_pos: tuple[int, int],
+) -> tuple[list[Node], list[Node]]:
+    """Perform one A* Euclidean step in place using f(n) = g(n) + h(n)."""
+    rows = len(grid)
+    cols = len(grid[0]) if rows > 0 else 0
+
+    if not open_list:
+        return open_list, close_list
+
+    closed_positions: set[tuple[int, int]] = {node.position for node in close_list}
+    open_positions: set[tuple[int, int]] = {node.position for node in open_list}
+
+    current = open_list.pop(0)
+    open_positions.discard(current.position)
+    r, c = current.position
+
+    if (r, c) in closed_positions:
+        return open_list, close_list
+
+    close_list.append(current)
+    closed_positions.add((r, c))
+
+    if grid[r][c] == "E":
+        return open_list, close_list
+
+    for dr, dc in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
+        nr, nc = r + dr, c + dc
+        if 0 <= nr < rows and 0 <= nc < cols:
+            symbol = grid[nr][nc]
+            if symbol == "W":
+                continue
+            if (nr, nc) in closed_positions or (nr, nc) in open_positions:
+                continue
+
+            # Store g(n) in Node.weight and sort frontier by f(n)=g(n)+h(n).
+            g_cost = current.weight + WEIGHTS[symbol]
+            h_cost = sqrt((nr - end_pos[0]) ** 2 + (nc - end_pos[1]) ** 2)
+            new_priority = g_cost + h_cost
+            inserted = False
+            new_node = Node(position=(nr, nc), weight=g_cost, parent=current)
+            for i in range(len(open_list)):
+                existing = open_list[i]
+                existing_h = sqrt((existing.position[0] - end_pos[0]) ** 2 + (existing.position[1] - end_pos[1]) ** 2)
+                existing_priority = existing.weight + existing_h
+                if existing_priority > new_priority:
+                    open_list.insert(i, new_node)
+                    inserted = True
+                    break
+            if not inserted:
+                open_list.append(new_node)
+            open_positions.add((nr, nc))
+
+    return open_list, close_list
+
+
+def a_star_manhattan_steps(
+    grid: list[list[str]],
+    open_list: list[Node],
+    close_list: list[Node],
+    end_pos: tuple[int, int],
+) -> tuple[list[Node], list[Node]]:
+    """Perform one A* Manhattan step in place using f(n) = g(n) + h(n)."""
+    rows = len(grid)
+    cols = len(grid[0]) if rows > 0 else 0
+
+    if not open_list:
+        return open_list, close_list
+
+    closed_positions: set[tuple[int, int]] = {node.position for node in close_list}
+    open_positions: set[tuple[int, int]] = {node.position for node in open_list}
+
+    current = open_list.pop(0)
+    open_positions.discard(current.position)
+    r, c = current.position
+
+    if (r, c) in closed_positions:
+        return open_list, close_list
+
+    close_list.append(current)
+    closed_positions.add((r, c))
+
+    if grid[r][c] == "E":
+        return open_list, close_list
+
+    for dr, dc in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
+        nr, nc = r + dr, c + dc
+        if 0 <= nr < rows and 0 <= nc < cols:
+            symbol = grid[nr][nc]
+            if symbol == "W":
+                continue
+            if (nr, nc) in closed_positions or (nr, nc) in open_positions:
+                continue
+
+            # Store g(n) in Node.weight and sort frontier by f(n)=g(n)+h(n).
+            g_cost = current.weight + WEIGHTS[symbol]
+            h_cost = abs(nr - end_pos[0]) + abs(nc - end_pos[1])
+            new_priority = g_cost + h_cost
+            inserted = False
+            new_node = Node(position=(nr, nc), weight=g_cost, parent=current)
+            for i in range(len(open_list)):
+                existing = open_list[i]
+                existing_h = abs(existing.position[0] - end_pos[0]) + abs(existing.position[1] - end_pos[1])
+                existing_priority = existing.weight + existing_h
+                if existing_priority > new_priority:
                     open_list.insert(i, new_node)
                     inserted = True
                     break
@@ -248,6 +367,27 @@ def greedy_best_first(grid: list[list[str]]) -> tuple[list[Node], list[Node]]:
     end_pos = find_end(grid)
     while open_list:
         open_list, close_list = greedy_best_first_steps(grid, open_list, close_list, end_pos)
+        if close_list and grid[close_list[-1].position[0]][close_list[-1].position[1]] == "E":
+            break
+    return open_list, close_list
+
+def a_star_euclidean(grid: list[list[str]]) -> tuple[list[Node], list[Node]]:
+    """Run A* search with Euclidean heuristic from S to E."""
+    open_list, close_list = initialize_search(grid)
+    end_pos = find_end(grid)
+    while open_list:
+        open_list, close_list = a_star_euclidean_steps(grid, open_list, close_list, end_pos)
+        if close_list and grid[close_list[-1].position[0]][close_list[-1].position[1]] == "E":
+            break
+    return open_list, close_list
+
+
+def a_star_manhattan(grid: list[list[str]]) -> tuple[list[Node], list[Node]]:
+    """Run A* search with Manhattan heuristic from S to E."""
+    open_list, close_list = initialize_search(grid)
+    end_pos = find_end(grid)
+    while open_list:
+        open_list, close_list = a_star_manhattan_steps(grid, open_list, close_list, end_pos)
         if close_list and grid[close_list[-1].position[0]][close_list[-1].position[1]] == "E":
             break
     return open_list, close_list
